@@ -60,8 +60,8 @@ fatp
 
 od<-derivatives(oxy28mod, term = "s(age_year)")
 op<-ggplot(od, aes(x = data, y = derivative)) + theme_bw(base_size =14) + theme_update(plot.title = element_text(hjust = 0.4))+
-  geom_ribbon(aes(ymin = lower, ymax=upper), alpha = .20) +ylim(-0.5,0.5)+
-  geom_line()+xlab("Age")+ylab("Derivative")+labs(title = "Antioxidant capacity")+
+  geom_ribbon(aes(ymin = lower, ymax=upper), alpha = .20) +ylim(-0.1,0.1)+
+  geom_line(color='#619CFF')+xlab("Age")+ylab("Derivative")+labs(title = "Antioxidant capacity")+
   geom_hline(yintercept = 0, linetype = "dashed", color = "black")+
   theme(legend.position = "none")
 
@@ -111,29 +111,29 @@ sp
 library(gridExtra)
 
 
-bigderiv<-grid.arrange(bmdp, wlp,tarp,fatp, op, romp, hp, mp, tp, pp, rp, sp, bp,
-                       ncol=3, nrow=5)
+bigderiv<-grid.arrange(bmdp, wlp,tarp,fatp, romp,op, hp, tp,mp, pp, rp, sp, bp,
+                      ncol=3, nrow=5)
 
-bigderiv
+# bigderiv
 
 
 ##############################################################
 
-
-rsf<-readRDS("C:/PhD/Data/output2/rs_f.rds")
-rsm<-readRDS("C:/PhD/Data/output2/rs_m.rds")
-
-plot(rsf, select=1)
-plot(rsm, select=1)
-
-
-rfp<-dfunc(rsf, 's(parent_age)', 'Annual fitness', ylim = c(-4,2.1))
-rfp
+#
+# rsf<-readRDS("C:/PhD/Data/output2/rs_f.rds")
+# rsm<-readRDS("C:/PhD/Data/output2/rs_m.rds")
+#
+# plot(rsf, select=1)
+# plot(rsm, select=1)
 
 
-rsmp<-dfunc(rsm, 's(parent_age)', 'Annual fitness', ylim = c(-1,2.1))
-rsmp
-
+# rfp<-dfunc(rsf, 's(parent_age)', 'Annual fitness', ylim = c(-4,2.1))
+# rfp
+#
+#
+# rsmp<-dfunc(rsm, 's(parent_age)', 'Annual fitness', ylim = c(-1,2.1))
+# rsmp
+#
 
 
 

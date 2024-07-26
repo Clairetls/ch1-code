@@ -202,54 +202,17 @@ hf<-brm()
 
 #the above are examples of doable models
 
-#this model has no solution so far
-malaria<-read.csv("malaria_28_5.csv", sep = ';', dec = ',')
-
-mdata<-malaria[,c('BirdID', "age","newlifespan",'newstat',"birthyear","CatchID",
-                "avg_invert","TestResult",'FieldPeriodID')]
-haem_m<-haematocrit%>% filter(SexEstimate==1)
-haem_m<-haem_m[,c('BirdID', "age","newlifespan",'newstat',"birthyear","CatchID",
-                "avg_invert","Observer","wbc", "CatchTime",'FieldPeriodID')]
 
 
-malhaem<-left_join(haem_m, mdata, by.x=c('BirdID', 'age','newlifespan','birthyear', "CatchID",'FieldPeriodID'))
-
-
-
-test1234<-malhaem%>%
-  group_by(age,BirdID, FieldPeriodID)%>%
-  mutate(malcount=length(TestResult))%>%
-  mutate(haemcount=length(wbc))%>%
-  mutate(newwbc=ifelse(haemcount>1, mean(wbc, na.rm=T),wbc))
-
-
-test1234<-test1234[,-c(6,8,10)]
-test1234<-unique(test1234)
-
-test1234$wbc_z<-scale(test1234$newwbc)
-
-test1234<-test1234%>%filter(!is.na(TestResult))
-#not linear nor quadratic
 #different families
 
-#possible options:
-malhaem$Observer
 
-
-mh1<-gam(list(TestResult~s(age, k=16)+newlifespan+avg_invert+newstat+s(BirdID, bs="re"),
-              wbc_z~s(age, k=16)+newlifespan+avg_invert+newstat+s(BirdID, bs="re")),
-         family=mvn(d=2), method="REML", data=test1234)
-
-plot(mh1, pages = 1)
-solve(crossprod(mh1$family$data$R))
-0.04137108
 
 resids<-simulateResiduals(mh1)
 plotResiduals(resids)
 
 appraise(mh1)
 #possibly fine, only thing is malaria test result is binary 1,0
-obj1<-compare_smooths(mal28mod, buffy28mod, smooths = 's(age)', partial_match=T)
 
 
 obj2<-compare_smooths(body_28mod, prov28mod, smooths = c(1, 1))

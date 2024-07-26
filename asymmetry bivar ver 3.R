@@ -2,20 +2,20 @@ getwd()
 
 setwd('c:/PhD/Data/modelling dfs for habrok/Dataframes 28_5_24/')
 
-#################################################
+library(tidyverse)
+library(mgcv)
+library(lme4)
+library(lmerTest)
+library(APCtools)
 
+
+###################
 physio<-read.csv("physio_28_5.csv",stringsAsFactors = F)
 provisioning<-read.csv("provisioning_28_5.csv",stringsAsFactors = F, sep = ';',dec=',')
 
 haematocrit<-read.csv("haematocrit_28_5.csv",stringsAsFactors = F)
 telomeres<-read.csv("telomere_28_5.csv", stringsAsFactors = F)
 
-library(tidyverse)
-library(mgcv)
-library(gratia)
-install.packages('brms')
-library(brms)
-#gratia for checking gam diagnostics
 
 # Code for bivariate GAMMs (see also: https://rdrr.io/cran/mgcv/man/mvn.html):
 # b <- gam(list(y0~s(x0)+s(x1),y1~s(x2)+s(x3)),family=mvn(d=2),data=dat)
@@ -48,7 +48,7 @@ pdata<-provisioning[,c("BirdID","birthyear","prate","age_year","SexEstimate",
 
 
 bmdata <- bmdata[!is.na(bmdata$newBodyMass),]
-bmdata<-bmdata[,-c(8)]
+# bmdata<-bmdata[,-c(8)]
 squished<-left_join(pdata, bmdata)
 squished<-unique(squished)
 
@@ -66,11 +66,32 @@ bp<-gam(list(BodyMass_z~s(age_year, k=-1)+newlifespan+SexEstimate+newstat+
         family=mvn(d=2),method="REML",data=squished)
 
 summary(bp)
-appraise(bp)
 
 plot(bp, pages = 1)
 
 solve(crossprod(bp$family$data$R)) ## estimated cov matrix
+
+#i think i might have to subset the data
+#but low sample size might be an issue
+
+######################################################################
+#bodymass and survival
+
+survival<-survival[,c('BirdID',"age","birthyear",'survival',
+                      'SexEstimate',"statbefore",'avg_bug','occasionyear')]
+names(survival)[names(survival)=="age"]<-'age_year'
+bsdata<-left_join(survival, bmdata, by = c("age_year", "BirdID", 'SexEstimate',
+                                           'birthyear'))
+
+
+
+#er whut do i do..
+
+
+
+
+
+
 
 ##############################
 #telomere length and fat score -- mcmcglmm, linear
@@ -96,7 +117,6 @@ write.csv(telofat, "telofat.csv")
 
 #example model-- needs tweaking + priors and other variables
 #prior is wrong
-#the correct one is in the telo fat bayesian script
 prior1<-list(G = list(G1 = list(v=diag(2), nu=0.002),
                      G2 = list(V=diag(2), nu=0.002)),
             R= list(R1=list(v=diag(2), nu=0.002),
@@ -107,19 +127,11 @@ tf<-MCMCglmm(cbind(FatScore, RTL_z)~age_year+newlifespan+SexEstimate+newstat+avg
          family = c('poisson', 'gaussian'), prior = prior1,
          data=telofat, nitt = 10000000, burnin=10000, thin=100)
 
-#no of iterations- burnin divided by thin is 2000
-#check parameter expanded prior
-#covar is -0.08
+
 
 summary(tf)
 
-
-#reading bayesian model results from other script
-tfbayes<-readRDS('tf_model.rds')
-
-plot.MCMCglmm(tfbayes)
-summary(tfbayes)
-
+#covar is -0.08
 
 
 #I tried running this model with a gam bivariate and family=mvn(d=2)
@@ -185,19 +197,14 @@ tb<-gam(list(RTL_z~s(age_year)+newlifespan+avg_invert.x+newstat.x+
 
 solve(crossprod(tb$family$data$R))
 
-0.0178214
-
-appraise(tb)
-
+#0.0178214
 
 ############################
-names(haemf)[names(haemf)=="age"]<-"age_year"
 haemfat<- left_join(haemf, fatdata, by=c('BirdID',"age_year", 'newlifespan',
-                                         'newstat','birthyear', "CatchID"))
+                                         'newstat','birthyear',"CatchID"))
 
-haemfat<-filter(haemfat, !is.na(haemfat$FatScore))
 
-hf<-brm()
+sum(is.na(haemfat$FatScore))
 
 
 #the above are examples of doable models
@@ -207,7 +214,7 @@ malaria<-read.csv("malaria_28_5.csv", sep = ';', dec = ',')
 
 mdata<-malaria[,c('BirdID', "age","newlifespan",'newstat',"birthyear","CatchID",
                 "avg_invert","TestResult",'FieldPeriodID')]
-haem_m<-haematocrit%>% filter(SexEstimate==1)
+haem_m<-filter(haematocrit, haematocrit$SexEstimate==1)
 haem_m<-haem_m[,c('BirdID', "age","newlifespan",'newstat',"birthyear","CatchID",
                 "avg_invert","Observer","wbc", "CatchTime",'FieldPeriodID')]
 
@@ -233,46 +240,32 @@ test1234<-test1234%>%filter(!is.na(TestResult))
 #different families
 
 #possible options:
-malhaem$Observer
 
 
-mh1<-gam(list(TestResult~s(age, k=16)+newlifespan+avg_invert+newstat+s(BirdID, bs="re"),
-              wbc_z~s(age, k=16)+newlifespan+avg_invert+newstat+s(BirdID, bs="re")),
+mh1<-gam(list(TestResult~s(age)+newlifespan+s(BirdID, bs="re"),
+              wbc_z~s(age)+newlifespan+s(BirdID, bs="re")),
          family=mvn(d=2), method="REML", data=test1234)
 
 plot(mh1, pages = 1)
 solve(crossprod(mh1$family$data$R))
-0.04137108
+0.04458811
 
-resids<-simulateResiduals(mh1)
-plotResiduals(resids)
-
-appraise(mh1)
 #possibly fine, only thing is malaria test result is binary 1,0
-obj1<-compare_smooths(mal28mod, buffy28mod, smooths = 's(age)', partial_match=T)
 
-
-obj2<-compare_smooths(body_28mod, prov28mod, smooths = c(1, 1))
-
-draw(obj1)
-draw(obj2)
-View(obj1)
 
 test1234<-as.data.frame(test1234)
 mh2<-MCMCglmm(cbind(TestResult, wbc_z)~age+I(age^2)+newlifespan,
              random = ~us(trait):BirdID, rcov=~us(trait):units,
-             family = c('categorical', 'gaussian'),data=test1234, nitt = 100000, burnin=1000, thin=50)
+             family = c('categorical', 'gaussian'),data=test1234, nitt = 10000, burnin=1000, thin=50)
 
 
 summary(mh2)
 -0.06443
-#i dont think its this tho
 
 #different slope if gaussian vs poisson
 #mvn2 probably doesnt satisfy the assumptions, so fat has a positive slope now
 #mcmcglmm- must use square term
 #or fine if linear?
 #maybe i can use a mix of both..
-
 
 
