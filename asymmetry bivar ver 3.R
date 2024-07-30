@@ -1,7 +1,7 @@
 getwd()
 
 setwd('c:/PhD/Data/modelling dfs for habrok/Dataframes 28_5_24/')
-
+fat28mod<-readRDS("c:/PhD/Data/modelling dfs for habrok/Dataframes 28_5_24/fat28mod.rds")
 library(tidyverse)
 library(mgcv)
 library(lme4)
@@ -11,7 +11,7 @@ library(lmerTest)
 library(APCtools)
 library(modelsummary)
 
-modelsummary(body_28mod)
+# modelsummary(body_28mod)
 ###################
 physio<-read.csv("physio_28_5.csv",stringsAsFactors = F)
 provisioning<-read.csv("provisioning_28_5.csv",stringsAsFactors = F, sep = ';',dec=',')
@@ -31,12 +31,12 @@ telomeres<-read.csv("telomere_28_5.csv", stringsAsFactors = F)
 #join data together
 
 bmdata<-physio[,c("BirdID",'birthyear', "age_year", "BodyMass",'SexEstimate',
-                  'newlifespan',"FieldPeriodID",'newstat',"Observer",'RightTarsus',
+                  'newlifespan','newstat',"Observer",'RightTarsus',
                   "avg_invert",'CatchTime_mins',"CatchID")]
 names(bmdata)[names(bmdata)=='Observer']<-"bmobserver"
 
 test<-bmdata%>%
-  group_by(age_year,BirdID,FieldPeriodID)%>%
+  group_by(age_year,BirdID)%>%
   mutate(bmcount=length(BodyMass))%>%
   mutate(newBodyMass=ifelse(bmcount>1, mean(BodyMass, na.rm=T),BodyMass),
          newtars=ifelse(bmcount>1, mean(RightTarsus, na.rm=T),RightTarsus),
@@ -44,18 +44,21 @@ test<-bmdata%>%
          CatchTime_mins=sample(CatchTime_mins, 1))
 
 test<-test%>% filter(!is.na(newBodyMass))
-test<-test[,-c(4,10,13)]
+test<-test[,-c(4,9,12)]
 test<-unique(test)
 bmdata<-test
 
 names(provisioning)[names(provisioning)=='age_years']<-"age_year"
 pdata<-provisioning[,c("BirdID","birthyear","prate","age_year","SexEstimate",
-                       "newlifespan","FieldPeriodID",'newstat',"BroodSize",
+                       "newlifespan",'newstat',"BroodSize",
                        'nr_helpers','avg_invert')]
 
 
+
+
 # bmdata<-bmdata[,-c(8)]
-squished<-left_join(pdata, bmdata)
+squished<-left_join(pdata, bmdata, by=c('BirdID', 'age_year',
+                                        'SexEstimate', 'birthyear', 'newlifespan'))
 squished<-unique(squished)
 bodyprov<-filter(squished, !is.na(squished$newBodyMass))
 
@@ -73,14 +76,14 @@ bodyprov$birthyear<-as.factor(bodyprov$birthyear)
 plot(bodyprov$age_year, bodyprov$BodyMass_z)
 
 #whole dataset
-bp<-gam(list(BodyMass_z~s(age_year, k=-1)+newlifespan+SexEstimate+newstat+
-               avg_invert+RightTarsus_z+s(birthyear, bs='re')+s(BirdID, bs="re"),
-         prate_z~ s(age_year, k=-1)+newlifespan+SexEstimate+newstat+BroodSize+
-           nr_helpers+avg_invert+s(birthyear, bs='re')+s(BirdID, bs="re")),
+bp<-gam(list(BodyMass_z~s(age_year, k=-1)+newlifespan+SexEstimate+newstat.y+
+               avg_invert.y+RightTarsus_z+s(birthyear, bs='re')+s(age_year, BirdID, bs="re"),
+         prate_z~ s(age_year, k=-1)+newlifespan+SexEstimate+newstat.x+BroodSize+
+           nr_helpers+avg_invert.x+s(birthyear, bs='re')+s(age_year, BirdID, bs="re")),
         family=mvn(d=2),method="REML",data=bodyprov)
 
 summary(bp)
-
+solve(crossprod(bp$family$data$R)) ## estimated cov matrix
 
 
 plot(trial, pages=1)
@@ -99,19 +102,40 @@ postdeclinebp$BodyMass_z<-scale(postdeclinebp$newBodyMass)
 postdeclinebp$prate_z<-scale(postdeclinebp$prate)
 postdeclinebp$RightTarsus_z<-scale(postdeclinebp$RightTarsus)
 
-library(brms)
 
 #subsetted data and GLMM
-bmfit<-bf(BodyMass_z~age_year+RightTarsus_z)
-prfit<-bf(prate_z~age_year)
-fitprior <- get_prior(bf1+bf2, data = postdeclinebp)
+thing<-postdeclinebp%>%
+  group_by(BirdID)%>%
+  summarize(count=length(BirdID))
+
+bmfit<-bf(BodyMass_z~age_year+I(age_year)^2+newlifespan+RightTarsus_z+SexEstimate+avg_invert.y+
+            newstat.y+(1|birthyear)+(1|BirdID))
+prfit<-bf(prate_z~age_year+I(age_year)^2+newlifespan+SexEstimate+BroodSize+nr_helpers+
+            avg_invert.x+newstat.x+(1|birthyear)+(1|BirdID))
+fitprior <- get_prior(bmfit+prfit, data = postdeclinebp)
 fitprior
-fit<-brm(bmfit+prfit, data = postdeclinebp, chains = 4, iter=1000, warmup = 50, thin = 2)
+fit<-brm(bmfit+prfit, data = postdeclinebp, chains = 4,iter=10000,
+         warmup = 1000, thin = 5, prior = fitprior)
+fit
 plot(fit)
+summary(fit)
 
+vcov(fit)
 
+#in gamsfit#in gams
+postdeclinebp$SexEstimate<-as.factor(postdeclinebp$SexEstimate)
+postdeclinebp$BirdID<-as.factor(postdeclinebp$BirdID)
+postdeclinebp$birthyear<-as.factor(postdeclinebp$birthyear)
 
+postbp<-gam(list(BodyMass_z~s(age_year, k=-1)+newlifespan+SexEstimate+newstat+
+               avg_invert+RightTarsus_z+s(birthyear, bs='re')+s(age_year, BirdID, bs="re"),
+             prate_z~ s(age_year, k=-1)+newlifespan+SexEstimate+newstat+BroodSize+
+               nr_helpers+avg_invert+s(birthyear, bs='re')+s(age_year,BirdID, bs="re")),
+        family=mvn(d=2),method="REML",data=postdeclinebp)
 
+summary(postbp)
+plot(postbp, pages=1)
+solve(crossprod(postbp$family$data$R)) ## estimated cov matrix
 
 
 
