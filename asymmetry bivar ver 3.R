@@ -10,6 +10,7 @@ library(glmm)
 library(lmerTest)
 library(APCtools)
 library(modelsummary)
+library(flextable)
 
 # modelsummary(body_28mod)
 ###################
@@ -18,6 +19,9 @@ provisioning<-read.csv("provisioning_28_5.csv",stringsAsFactors = F, sep = ';',d
 
 haematocrit<-read.csv("haematocrit_28_5.csv",stringsAsFactors = F)
 telomeres<-read.csv("telomere_28_5.csv", stringsAsFactors = F)
+
+
+
 
 
 # Code for bivariate GAMMs (see also: https://rdrr.io/cran/mgcv/man/mvn.html):
