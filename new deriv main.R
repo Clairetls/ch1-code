@@ -1,4 +1,4 @@
-setwd('C:/PhD/Data/modelling dfs for habrok/Dataframes 28_5_24/')
+# setwd('C:/PhD/Data/modelling dfs for habrok/Dataframes 28_5_24/')
 library(pracma)
 # install.packages("gratia")
 library(gratia)
@@ -10,7 +10,7 @@ files <- Sys.glob(file.path("*28mod.rds"))
 gamlist<-lapply(files, readRDS)
 names(gamlist)<-gsub(c(".rds"),"",files)
 list2env(gamlist,envir=.GlobalEnv)
-survivalmodel<-readRDS("survivalfinal2.rds")
+survivalmodel<-readRDS("C:/PhD/Data/modelling dfs for habrok/Dataframes 28_5_24/survivalfinal2.rds")
 
 
 ####################################################
@@ -113,9 +113,12 @@ rp
 sp<-dfunc(survivalmodel, "s(age)","(n) Survival", ylim = c(-0.7,0.3))
 sp
 
+survd<-derivatives(survivalmodel)
+View(survd)
+rsd<-derivatives(rs28mod)
+rsd<-filter(rsd, is.na(rsd$sex))
 
-
-
+View(rsd)
 library(gridExtra)
 
 
