@@ -13,7 +13,7 @@ files <- Sys.glob(file.path("*28mod.rds"))
 gamlist<-lapply(files, readRDS)
 names(gamlist)<-gsub(c(".rds"),"",files)
 list2env(gamlist,envir=.GlobalEnv)
-survivalmodel<-readRDS("survivalfinal.rds")
+survivalmodel<-readRDS('survivalfinal2.rds')
 
 #####################################
 m2_pred <- predict(m2, newdata = d.pred, se.fit = T)
@@ -102,8 +102,8 @@ plot(rs28mod,select=1,seWithMean = T,shade=TRUE, trans= exp, main="ARS",
      cex.main=2, cex.lab=1.3)
 points(jitter(reprosuccess$ars,0.4)~reprosuccess$parent_age, reprosuccess, col=alpha("blue", 0.3))
 
-
-plot(survivalmodel, select=1, trans= function(x) { exp(x) / (exp(x) + 1) }, shade = T, se = T, 
-     ylab = "survival", xlab="age", ylim=c(-0.1,1.1), main="survival")
+plot(survivalmodel, select=1, trans= function(x) { exp(x) / (exp(x) + 1) }, shade = T, se = T,
+     ylab = "Survival", xlab="Age", ylim=c(-0.1,1.1), main="Survival",
+     cex.main=2, cex.lab=1.3)
 points(jitter(survival1$survival, 0.1)~survival1$age, col=alpha("blue", 0.3))
 
