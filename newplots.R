@@ -80,8 +80,8 @@ plot(rom28mod,select=1,seWithMean = T,shade=TRUE, main="Oxidants",
 points(jitter(oxy$sum_roms_z, 0.2)~oxy$age_year, oxy, col=alpha("blue", 0.3))
 
 
-plot(telo28mod,select=1,seWithMean = T,shade=TRUE, main="Telomere Length",
-     ylab="Telomere Length",xlab="Age",xlim = c(0,20), ylim=c(-2,6),
+plot(telo28mod,select=1,seWithMean = T,shade=TRUE, main="Relative TL",
+     ylab="Telomere Length",xlab="Age",xlim = c(0,18), ylim=c(-2,6),
      cex.main=2, cex.lab=1.3)
 points(jitter(telomeres$RTL_z, 0.2)~telomeres$age_year, telomeres, col=alpha("blue", 0.3))
 

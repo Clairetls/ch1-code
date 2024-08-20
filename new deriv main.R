@@ -26,7 +26,7 @@ survivalmodel<-readRDS("C:/PhD/Data/modelling dfs for habrok/Dataframes 28_5_24/
 
 
 bmd<-derivatives(body_28mod, term = "s(age_year)")
-bmdp<-ggplot(bmd, aes(age_year, derivative)) + theme_bw(base_size =14) + theme_update(plot.title = element_text(hjust = 0.4))+
+bmdp<-ggplot(bmd, aes(age_year, .derivative)) + theme_bw(base_size =14) + theme_update(plot.title = element_text(hjust = 0.4))+
   geom_ribbon(aes(ymin = .lower_ci, ymax = .upper_ci), alpha = .20)+
   geom_line(color='#619CFF')+xlab("Age")+ylab("Derivative")+
   labs(title = "(a) Body Mass")+
@@ -95,16 +95,17 @@ bpm<-ggplot(bdm, aes(x = age, y = .derivative)) + theme_bw(base_size =14) + them
 
 bpm
 
+mp<-dfunc(mal28mod, 's(age)',"(j) Malaria", ylim = c(-1,1.5))
+mp
 
-tp<-dfunc(telo28mod, 's(age_year)', "(j) Relative TL", c(-0.08,0.02))
+tp<-dfunc(telo28mod, 's(age_year)', "(k) Relative TL", c(-0.08,0.02))
 tp
 
 
 pp<-dfunc(prov28mod, 's(age)', '(l) Provisioning rate',ylim = c(-0.2,0.1))
 pp
 
-mp<-dfunc(mal28mod, 's(age)',"(k) Malaria", ylim = c(-1,1.5))
-mp
+
 
 rp<-dfunc(rs28mod, 's(parent_age)', '(m) Annual fitness', ylim = c(-2.25,2.5))
 rp
@@ -122,27 +123,27 @@ View(rsd)
 library(gridExtra)
 
 
-bigderiv<-grid.arrange(bmdp, wlp,tarp,fatp, romp,op, hp, bpf, bpm, tp,mp, pp, rp, sp,
+bigderiv<-grid.arrange(bmdp, wlp,tarp,fatp, romp,op, hp, bpf, bpm,mp, tp, pp, rp, sp,
                       ncol=3, nrow=5)
 
 # bigderiv
 
 
 ##############################################################
-library(flextable)
-
-#create model summary tables
-as_flextable(body_28mod)
-as_flextable(wing28mod)
-as_flextable(tars28mod)
-as_flextable(fat28mod)
-as_flextable(rom28mod)
-as_flextable(oxy28mod)
-as_flextable(haem28mod)
-as_flextable(buffy28mod)
-as_flextable(telo28mod)
-as_flextable(mal28mod)
-as_flextable(prov28mod)
-as_flextable(rs28mod)
-as_flextable(survivalmodel)
+# library(flextable)
+#
+# #create model summary tables
+# as_flextable(body_28mod)
+# as_flextable(wing28mod)
+# as_flextable(tars28mod)
+# as_flextable(fat28mod)
+# as_flextable(rom28mod)
+# as_flextable(oxy28mod)
+# as_flextable(haem28mod)
+# as_flextable(buffy28mod)
+# as_flextable(telo28mod)
+# as_flextable(mal28mod)
+# as_flextable(prov28mod)
+# as_flextable(rs28mod)
+# as_flextable(survivalmodel)
 
