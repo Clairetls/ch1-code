@@ -127,6 +127,8 @@ postdeclinebp$SexEstimate<-as.factor(postdeclinebp$SexEstimate)
 postdeclinebp$BirdID<-as.factor(postdeclinebp$BirdID)
 postdeclinebp$birthyear<-as.factor(postdeclinebp$birthyear)
 
+postdeclinebp<-na.omit(postdeclinebp)
+
 postbp<-gam(list(BodyMass_z~s(age_year, k=-1)+newlifespan+SexEstimate+newstat.x+
                avg_invert.x+RightTarsus_z+s(birthyear, bs='re')+s(BirdID, bs="re"),
              prate_z~ s(age_year, k=-1)+newlifespan+SexEstimate+newstat.y+BroodSize+
@@ -140,7 +142,7 @@ solve(crossprod(postbp$family$data$R)) ## estimated cov matrix
         # [,1]         [,2]
 # [1,]  0.042942958 -0.008214547
 # [2,] -0.008214547  0.753117459
-
+library(flextable)
 as_flextable(postbp)
 
 
@@ -274,19 +276,29 @@ telobuff2<-filter(telobuff, !is.na(telobuff$RTL))
 
 telobuff2<-na.omit(telobuff2)
 
+telobuff2$newstat.x<-as.factor(telobuff2$newstat.x)
 telobuff2$Whodunnit<-as.factor(telobuff2$Whodunnit)
+telobuff2$birthyear<-as.factor(telobuff2$birthyear)
 telobuff2$Observer<-as.factor(telobuff2$Observer)
-
+telobuff2$BirdID<-as.factor(telobuff2$BirdID)
 #can only compare in females
+test<-gam(list(RTL_z~s(age_year)+newlifespan+avg_invert.x+newstat.x+
+                 s(birthyear, bs='re')+s(BirdID, bs="re"),
+               wbc_z~s(age_year)+newlifespan+avg_invert.x+newstat.x+
+                 s(birthyear, bs='re')+s(BirdID, bs="re")),
+          family = mvn(d=2), data = telobuff2, method="REML")
+
+
 tb<-gam(list(RTL_z~s(age_year)+newlifespan+avg_invert.x+newstat.x+
                +s(Whodunnit, bs="re")+s(birthyear, bs='re')+s(BirdID, bs="re"),
          wbc_z~s(age_year)+newlifespan+avg_invert.x+newstat.x+
            s(Observer, bs='re')+s(birthyear, bs='re')+s(BirdID, bs="re")),
     family = mvn(d=2), data = telobuff2, method="REML")
 
-solve(crossprod(tb$family$data$R))
+solve(crossprod(test$family$data$R))
 
 
+as_flextable(tb)
 
 #0.0178214
 
@@ -347,7 +359,7 @@ plot(hfmcmc)
 summary(hfmcmc)
 autocorr(hfmcmc$VCV)
 autocorr(hfmcmc$Sol)
-
+summary(tfmod)
 
 cov_age_year <- hfmcmc$VCV[,c(5:8)]
 colnames(cov_age_year)<-c('wbc','fatwbc','wbcfat','fat')
@@ -358,3 +370,48 @@ library(modelsummary)
 library(broom.mixed)
 thing<-tidy(tfmod)
 tidyMCMC(thing)
+
+library(flextable)
+
+
+
+#this is for converting to observed scale - but i'm not sure if this works or not..
+library(QGglmm)
+library(purrr)
+summary(hfmcmc)
+# Formatting the output into lists
+# flatten() is a purrr function that removes a level of nesting in a list
+# e.g. it transforms list[[1]][[1]] into just list[[1]] which contains a vector
+X <- hfmcmc[["X"]]
+predict <- map(1:nrow(hfmcmc[["Sol"]]),
+               ~ matrix(X %*% hfmcmc[["Sol"]][., ], ncol = 2))# Now, we can do the same with "VCV",
+# but we need to format it into a matrix as well.
+# Note grep("animal", ...) which collects only columns
+# related to the "animal" effect.
+G <-flatten(
+    apply(hfmcmc[["VCV"]][ , grep("BirdID", colnames(hfmcmc[["VCV"]]))],
+          1,
+          function(row) {
+            list(matrix(row, ncol = 2))
+          })
+  )
+#the units
+R <-flatten(
+    apply(hfmcmc[["VCV"]][ , grep("units", colnames(hfmcmc[["VCV"]]))],
+          1,
+          function(row) {
+            row[4] <- row[4] - 1
+            list(matrix(row, ncol = 2))
+          })
+  )
+# To obtain P we need to add G and R for each elements of their lists, easy:
+P <- map2(G, R, `+`)
+
+paramsM2 <-pmap(list(predict = predict, vcv.G = G,vcv.P = P),
+       QGmvparams,
+       models = c("Gaussian", "Poisson.log"),
+       verbose = FALSE)
+
+apply(paramsM2[["vcv.G.obs"]], c(1, 2), mean)
+apply(paramsM2[["vcv.G.obs"]], c(1, 2), function (vec) { HPDinterval(as.mcmc(vec))[1] })
+apply(paramsM2[["vcv.G.obs"]], c(1, 2), function (vec) { HPDinterval(as.mcmc(vec))[2] })
